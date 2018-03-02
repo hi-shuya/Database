@@ -1,0 +1,40 @@
+已知会议时间 新插入会议逻辑
+
+
+逻辑是这样
+
+1、判断开始时间是否在会议时间中，如存在，返回失败。
+
+2、判断结束时间是否在下一个会议开始前，如果是，则执行插入操作，如果不是，返回失败。
+[code]
+create table tmp_hysj 
+(
+kssj varchar2(20),
+jssj varchar2(20)
+);
+insert into tmp_hysj values (800,1200);
+insert into tmp_hysj values (1400,1800);
+insert into tmp_hysj values (1900,2100);
+
+--查询所有已占用时间，rownum作为区间号码
+select rownum rn,t.* from tmp_hysj t;
+
+--查询出待插入的开始时间是否在已有会议时间里面 返回flag 1为已存在 0为不存在，此处插入900
+select decode(sum(t1.flag),0,0,1) flag from(
+select case when /*此处为变量*/900 between kssj and jssj then 1 else 0 end flag ,rn from (select rownum rn,t.* from tmp_hysj t)) t1
+;
+
+--取得区间号码，如700在区间1之前,此时只要判断待插入的结束时间在区间1开始时间之前就可以，返回flag，1为可行，0为不可行
+
+select case when 750 <= nvl(t1.kssj,2400) then 1 else 0 end flag from 
+(select rownum rn,t.* from tmp_hysj t
+/*最后一个区间之后将2400作为最后时间*/
+union 
+select count(1)+1,'2400','0' from tmp_hysj t) t1 where rn = (select sum(ct)+1 qjhm from (
+select case when 700 <= t.kssj then 0 else 1 end ct from tmp_hysj t));
+
+[/code] 
+
+写的有点乱，纯SQL，用的oralcle的数据库，逻辑大概是这样子。
+
+PS:存在一些问题，例如between函数是闭区间函数，会议不可跨天。 
